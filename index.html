@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UnChatGPTify</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #1c1c1f;
+      color: #f5f5f5;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px;
+      background: linear-gradient(160deg, #1c1c1f 0%, #232329 60%, #1d1d22 100%);
+    }
+
+    h1 {
+      margin-bottom: 16px;
+      font-size: 2rem;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    .container {
+      width: min(1200px, 100%);
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    textarea,
+    .output {
+      background: #2a2a30;
+      border: 1px solid #3c3c45;
+      border-radius: 16px;
+      padding: 16px;
+      color: inherit;
+      font-size: 1rem;
+      line-height: 1.5;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    textarea {
+      min-height: 280px;
+      resize: vertical;
+    }
+
+    .output {
+      min-height: 280px;
+      position: relative;
+    }
+
+    .output[readonly] {
+      cursor: default;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #00a67d, #18b4b8);
+      color: #0f0f12;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .secondary-btn {
+      background: #3c3c45;
+      color: #f5f5f5;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+    }
+
+    .secondary-btn:hover {
+      background: #4c4c58;
+    }
+
+    .summary {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #c6c6d0;
+      text-align: center;
+    }
+
+    .copied-message {
+      font-size: 0.8rem;
+      color: #80ffc2;
+      height: 1em;
+      text-align: center;
+    }
+
+    @media (max-width: 720px) {
+      .actions {
+        flex-direction: row;
+        justify-content: center;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>UnChatGPTify</h1>
+  <div class="container">
+    <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+
+    <div class="actions">
+      <button id="cleanBtn">UnChatGPTify</button>
+      <button id="copyBtn" class="secondary-btn">Copy</button>
+      <div class="copied-message" id="copiedMessage"></div>
+      <div class="summary" id="summary">Nothing removed yet.</div>
+    </div>
+
+    <textarea id="outputText" class="output" readonly placeholder="Cleaned text will appear here"></textarea>
+  </div>
+
+  <script>
+    const invisibleChars = [
+      { name: "Zero width space", value: /\u200B/g },
+      { name: "Zero width non-joiner", value: /\u200C/g },
+      { name: "Zero width joiner", value: /\u200D/g },
+      { name: "Byte order mark", value: /\uFEFF/g },
+      { name: "Non-breaking space", value: /\u00A0/g, replaceWith: " " }
+    ];
+
+    function cleanText(text) {
+      const counts = {};
+      let cleaned = text;
+
+      invisibleChars.forEach(({ name, value, replaceWith = "" }) => {
+        const matches = cleaned.match(value);
+        if (matches) {
+          counts[name] = matches.length;
+          cleaned = cleaned.replace(value, replaceWith);
+        }
+      });
+
+      return { cleaned, counts };
+    }
+
+    const inputText = document.getElementById("inputText");
+    const outputText = document.getElementById("outputText");
+    const summary = document.getElementById("summary");
+    const cleanBtn = document.getElementById("cleanBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const copiedMessage = document.getElementById("copiedMessage");
+
+    cleanBtn.addEventListener("click", () => {
+      const { cleaned, counts } = cleanText(inputText.value);
+      outputText.value = cleaned;
+
+      const entries = Object.entries(counts);
+      summary.textContent = entries.length
+        ? entries.map(([name, count]) => `${name}: ${count}`).join(" • ")
+        : "Nothing removed.";
+
+      copiedMessage.textContent = "";
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(outputText.value);
+        copiedMessage.textContent = "Copied!";
+        setTimeout(() => {
+          copiedMessage.textContent = "";
+        }, 2000);
+      } catch (err) {
+        copiedMessage.textContent = "Copy failed";
+      }
+    });
+  </script>
+</body>
+</html>
